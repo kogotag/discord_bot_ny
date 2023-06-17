@@ -1,0 +1,24 @@
+on:
+  push:
+    branches:
+      - master
+jobs:
+  deploy_job:
+    name: deploy
+    runs-on: self-hosted
+    steps:
+    - name: Checkout project sources
+      uses: actions/checkout@v2
+    - name: build fatjar
+      run: |
+        chmod +x gradlew
+        ./gradlew customFatJar
+    - name: stop bot
+      run: 
+        sh /root/bots/discord_bot_ny/stop.sh
+    - name: change jarfile
+      run:
+        mv build/libs/discord_bot_ny-1.0.jar /root/bots/discord_bot_ny/discord_bot_ny-1.0.jar
+    - name: start bot
+      run: |
+        sudo /root/bots/discord_bot_ny/screen.sh
