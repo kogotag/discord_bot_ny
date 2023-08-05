@@ -1,0 +1,8 @@
+services:
+  discord_bot_ny:
+    container_name: discord_bot_ny
+    build:
+      context: .
+    volumes:
+      - ../configs/static_config.yaml:/app/static_config.yaml
+      - ../configs/dynamic_config.json:/app/dynamic_config.json

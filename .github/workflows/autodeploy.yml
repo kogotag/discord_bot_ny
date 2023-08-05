@@ -2,23 +2,34 @@ on:
   push:
     branches:
       - master
+
+env:
+  PROJECT_NAME: discord_bot_ny
+
 jobs:
-  deploy_job:
+  deploy:
     name: deploy
     runs-on: self-hosted
     steps:
-    - name: Checkout project sources
-      uses: actions/checkout@v2
-    - name: stop all bots
-      run: 
-        sudo sh /root/bots/stop.sh
-    - name: build fatjar
-      run: |
-        sudo chmod +x gradlew
-        sudo ./gradlew customFatJar
-    - name: change jarfile
-      run:
-        sudo mv build/libs/discord_bot_ny-1.0.jar /root/bots/discord_bot_ny/discord_bot_ny-1.0.jar
-    - name: start all bots
-      run:
-        sudo sh /root/bots/start.sh
+      - name: Checkout project sources
+        uses: actions/checkout@v2
+      - name: Copy everything in work directory
+        run: |
+          cp -r src/. ~/$PROJECT_NAME/build/src
+          cp -r gradle/. ~/$PROJECT_NAME/build/gradle
+          cp build.gradle ~/$PROJECT_NAME/build/build.gradle
+          cp settings.gradle ~/$PROJECT_NAME/build/settings.gradle
+          cp gradlew ~/$PROJECT_NAME/build/gradlew
+          cp docker-compose.yml ~/$PROJECT_NAME/build/docker-compose.yml
+          cp Dockerfile ~/$PROJECT_NAME/build/Dockerfile
+      - name: Stop active bot
+        run: |
+          sudo docker stop $PROJECT_NAME || true
+          sudo docker rm $PROJECT_NAME || true
+          sudo docker image rm build-$PROJECT_NAME || true
+      - name: Check if configs exist
+        run: |
+          [[ -f ~/$PROJECT_NAME/configs/static_config.yaml ]] || touch ~/$PROJECT_NAME/configs/static_config.yaml
+          [[ -f ~/$PROJECT_NAME/configs/dynamic_config.json ]] || touch ~/$PROJECT_NAME/configs/dynamic_config.json
+      - name: Start bot
+        run: sudo docker compose -f ~/$PROJECT_NAME/build/docker-compose.yml up -d
