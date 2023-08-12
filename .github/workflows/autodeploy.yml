@@ -13,23 +13,29 @@ jobs:
     steps:
       - name: Checkout project sources
         uses: actions/checkout@v2
-      - name: Copy everything in work directory
+      - name: Clean directories
         run: |
-          cp -r src/. ~/$PROJECT_NAME/build/src
-          cp -r gradle/. ~/$PROJECT_NAME/build/gradle
-          cp build.gradle ~/$PROJECT_NAME/build/build.gradle
-          cp settings.gradle ~/$PROJECT_NAME/build/settings.gradle
-          cp gradlew ~/$PROJECT_NAME/build/gradlew
-          cp docker-compose.yml ~/$PROJECT_NAME/build/docker-compose.yml
-          cp Dockerfile ~/$PROJECT_NAME/build/Dockerfile
-      - name: Stop active bot
-        run: |
-          sudo docker stop $PROJECT_NAME || true
-          sudo docker rm $PROJECT_NAME || true
-          sudo docker image rm build-$PROJECT_NAME || true
-      - name: Check if configs exist
-        run: |
+          mkdir -p ~/$PROJECT_NAME/build || true
+          mkdir -p ~/$PROJECT_NAME/work || true
+          mkdir -p ~/$PROJECT_NAME/configs || true
           [[ -f ~/$PROJECT_NAME/configs/static_config.yaml ]] || touch ~/$PROJECT_NAME/configs/static_config.yaml
           [[ -f ~/$PROJECT_NAME/configs/dynamic_config.json ]] || touch ~/$PROJECT_NAME/configs/dynamic_config.json
+          rm -rf ~/$PROJECT_NAME/build/* || true
+          rm -rf ~/$PROJECT_NAME/work/* || true
+      - name: Copy everything in work directory
+        run: |
+          mv -v ./{src,gradle,build.gradle,settings.gradle,gradlew,docker-compose.yml,Dockerfile,docker-compose-build.yml,Dockerfile_build} ~/$PROJECT_NAME/work/
+      - name: Build jar
+        run: |
+          docker container stop $PROJECT_NAME_build || true
+          docker container rm $PROJECT_NAME_build || true
+          docker image rm work-$PROJECT_NAME_build || true
+          docker compose -f ~/$PROJECT_NAME/work/docker-compose-build.yml up
+          mv ~/$PROJECT_NAME/build/$PROJECT_NAME-1.0.jar ~/$PROJECT_NAME/work/
+      - name: Stop active bot
+        run: |
+          docker stop $PROJECT_NAME || true
+          docker rm $PROJECT_NAME || true
+          docker image rm work-$PROJECT_NAME || true
       - name: Start bot
-        run: sudo docker compose -f ~/$PROJECT_NAME/build/docker-compose.yml up -d
+        run: docker compose -f ~/$PROJECT_NAME/work/docker-compose.yml up -d
